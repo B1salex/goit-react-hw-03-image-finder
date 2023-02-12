@@ -14,5 +14,5 @@ export const loadImage = async (searchName, page) => {
           webformatURL,
           tags,
         }})
-    return images;
+    return {images, totalHits: response.data.totalHits};
 };
