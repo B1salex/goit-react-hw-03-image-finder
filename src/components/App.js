@@ -19,6 +19,7 @@ export default class App extends Component {
     items: [],
     isLoading: false,
     error: null,
+    sb: false
   }
 
   openModalOpen = ({target}) => {
@@ -57,11 +58,11 @@ export default class App extends Component {
       this.setState({
         isLoading: true,
       });
-      const images = await API.loadImage(searchName, page);
+      const {images, totalHits} = await API.loadImage(searchName, page);
 
       this.setState(prevState => ({
         items: [...prevState.items, ...images],
-        isLoading: false,
+        sb: this.state.page < Math.ceil(totalHits /1 2)
       }));
       if (images.length === 0) {
         alert("Sorry, we can't find anyting for your request. Please, enter another request");
@@ -87,7 +88,7 @@ export default class App extends Component {
 
 
   render() {
-    const { items, largeImage, isLoading, error} = this.state;
+    const { items, largeImage, isLoading, error,sb} = this.state;
 
     return (
       <div className="App">
@@ -95,7 +96,7 @@ export default class App extends Component {
               {error && <p>{error}</p>}
                {items.length > 0 &&  <ImageGallery items={items}  onClick={this.openModalOpen} />}
                {isLoading && <Loader />}
-               {items.length >= 12 && <Button onClick={this.handleLoadMore} isLoading={isLoading}/>}
+               {sb && <Button onClick={this.handleLoadMore} isLoading={isLoading}/>}
               {largeImage && (<Modal onClose={this.onModalClose} url={largeImage} />)}
              </div>
     );
