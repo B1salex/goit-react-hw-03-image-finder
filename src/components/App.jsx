@@ -1,51 +1,65 @@
-import { Component } from "react";
+import { Component } from 'react';
 import { Searchbar } from './Searchbar/Searchbar';
 import { AppStyle } from './App.styled';
 import { ImageGallery } from './ImageGallery/ImageGallery';
-import { LoadMore } from "./LoadMore/LoadMore";
+import { LoadMore } from './LoadMore/LoadMore';
 import { Loader } from './Loader/Loader';
+import { imagesAPI } from './Servise/FetchImages';
+import { ToastContainer, toast } from 'react-toastify';
 
 export class App extends Component {
   state = {
     query: '',
     images: [],
     page: 1,
-    status: "idle",
+    status: 'idle',
     openButtonLoadMore: false,
-  }
-
-  handleFormSubmit = query => {
-    this.setState({ page:1, query, images: [] });
   };
 
-  componentDidUpdate(prevProps, prevState) {
-    const { page, query } = this.state
-    const BASE_URL = 'https://pixabay.com/api/';
-    const API_KEY = '32850209-97f2951747f8bc30e5bbd4a42';
-      
+  handleFormSubmit = query => {
+    this.setState({ page: 1, query, images: [] });
+  };
+
+  componentDidUpdate(_, prevState) {
+    const { query, page } = this.state;
+
     if (prevState.query !== query || prevState.page !== page) {
-      this.setState({ status: 'pending'})
-      fetch(`${BASE_URL}?q=${query}&page=${page}&key=${API_KEY}&image_type=photo&orientation=horizontal&per_page=12`)
-        .then(response => response.json())
-        .then(searchInfo => {
-          if (searchInfo.hits.length !== 0) {
-            if (searchInfo.totalHits - 12 * page > 0) {
-              this.setState({ openButtonLoadMore: true})
-            } else {
-              this.setState({ openButtonLoadMore: false })
-            }
-            return  this.setState(prevState => ({ images: [...prevState.images, ...searchInfo.hits], status: 'resolved'}))
-          }
-          this.setState({ status: 'rejected' })
-          return Promise.reject(
-            new Error("Sory, no result!")
-          )
-        })
-        .catch((error) => {
-          this.setState({error, status: 'rejected' })
-        })
+      this.setState({
+        isLoading: true,
+      });
+
+      this.getPictures(query, page);
     }
-  } 
+  }
+
+  getPictures = (query, page) => {
+    imagesAPI
+      .fetchImages(query, page)
+      .then(images => {
+        if (images.hits.length < 1) {
+          return toast.info(
+            `😅 Unfortunately the world is not that creative yet, so we did not find pictures on request ${query}. Try something less eccentric and we'll make you happy!`
+          );
+        }
+
+        this.setState(prevState => ({
+          query,
+          images: [...prevState.images, ...images.hits],
+          page,
+          totalImg: images.totalHits,
+        }));
+      })
+      .catch(error => {
+        this.setState({
+          error,
+        });
+      })
+      .finally(() => {
+        this.setState({
+          isLoading: false,
+        });
+      });
+  };
 
   loadMore = () => {
     this.setState(prevState => ({
@@ -57,7 +71,7 @@ export class App extends Component {
   render() {
     const { images, status, query, openButtonLoadMore } = this.state;
 
-    if (status === "idle") {
+    if (status === 'idle') {
       return (
         <AppStyle>
           <Searchbar onSubmit={this.handleFormSubmit} />
@@ -66,17 +80,18 @@ export class App extends Component {
       );
     }
 
-    if (status === "pending") {
+    if (status === 'pending') {
       return (
         <AppStyle>
           <Searchbar onSubmit={this.handleFormSubmit} />
           <ImageGallery items={images} />
           <Loader />
-        </AppStyle>       
+          <ToastContainer />
+        </AppStyle>
       );
     }
 
-    if (status === "resolved") {
+    if (status === 'resolved') {
       return (
         <AppStyle>
           <Searchbar onSubmit={this.handleFormSubmit} />
@@ -86,7 +101,7 @@ export class App extends Component {
       );
     }
 
-    if (status === "rejected") {
+    if (status === 'rejected') {
       return (
         <AppStyle>
           <Searchbar onSubmit={this.handleFormSubmit} />
@@ -95,4 +110,4 @@ export class App extends Component {
       );
     }
   }
-};
+}
